@@ -1,4 +1,4 @@
-Kafka Cluster using the Latest version with 2 zookeepers and 2 brokers + a web admin GUIz.
+Kafka Cluster using the Latest (v3.9) with two zookeepers (v3.7), two brokers, and web admin GUI.
 Please make sure  you have 'docker' and 'docker-compose' installed on the server. 
 On Ubuntu, you can install it  as below
 
