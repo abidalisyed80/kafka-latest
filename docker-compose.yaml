@@ -1,0 +1,168 @@
+---
+version: '3.3'
+services:
+  zookeeper1:
+    image: zookeeper:3.7.0
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_SERVER_ID: 1
+      ZOOKEEPER_CLIENT_PORT: 2181 
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_INIT_LIMIT: 5
+      ZOOKEEPER_SYNC_LIMIT: 2
+    volumes:
+      - /data/zookeeper_data:/data
+    networks:
+      - kafka-network
+
+  zookeeper2:
+    image: zookeeper:3.7.0
+    container_name: zookeeper
+    ports:
+      - "2182:2181"
+    environment:
+      ZOOKEEPER_SERVER_ID: 2 
+      ZOOKEEPER_CLIENT_PORT: 2182 
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_INIT_LIMIT: 5
+      ZOOKEEPER_SYNC_LIMIT: 2
+    volumes:
+      - /data/zookeeper_data:/data
+    networks:
+      - kafka-network
+
+  kafka-broker1:
+    image: bitnami/kafka:latest
+    container_name: kafka-broker
+    ports:
+      - "19092:9092"
+    environment:
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-broker:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181;zookeeper:2182
+      KAFKA_BROKER_ID: 1
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    volumes:
+      - /data/kafka_broker_data:/bitnami/kafka
+    depends_on:
+      - zookeeper1
+      - zookeeper2
+    networks:
+      - kafka-network
+
+  kafka-broker2:
+    image: bitnami/kafka:latest
+    container_name: kafka-broker
+    ports:
+      - "29092:9092"
+    environment:
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-broker:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181;zookeeper:2182
+      KAFKA_BROKER_ID: 2
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    volumes:
+      - /data/kafka_broker_data:/bitnami/kafka
+    depends_on:
+      - zookeeper1
+      - zookeeper2
+    networks:
+      - kafka-network
+
+  kafka-connect:
+    image: bitnami/kafka-connect:latest
+    container_name: kafka-connect
+    ports:
+      - "8083:8083"
+    environment:
+      CONNECT_BOOTSTRAP_SERVERS: kafka-broker:19092;kafka-broker:29092
+      CONNECT_GROUP_ID: connect-cluster
+      CONNECT_CONFIG_STORAGE_TOPIC: connect-configs
+      CONNECT_OFFSET_STORAGE_TOPIC: connect-offsets
+      CONNECT_STATUS_STORAGE_TOPIC: connect-status
+      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.storage.StringConverter
+      CONNECT_VALUE_CONVERTER: org.apache.kafka.connect.storage.StringConverter
+      CONNECT_INTERNAL_KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_INTERNAL_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_REST_PORT: 8083
+      CONNECT_REST_ADVERTISED_HOST_NAME: connect
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_OFFSET_FLUSH_INTERVAL_MS: 10000
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: http://kafka-schema-registry:8081
+      CLASSPATH: /usr/share/java/monitoring-interceptors/monitoring-interceptors-6.1.0.jar
+      CONNECT_PRODUCER_INTERCEPTOR_CLASSES: "io.confluent.monitoring.clients.interceptor.MonitoringProducerInterceptor"
+      CONNECT_CONSUMER_INTERCEPTOR_CLASSES: "io.confluent.monitoring.clients.interceptor.MonitoringConsumerInterceptor"
+      CONNECT_PLUGIN_PATH: "/usr/share/java,/usr/share/confluent-hub-components,/bitnami/kafka/plugis"
+      CONNECT_LOG4J_LOGGERS: org.apache.zookeeper=ERROR,org.I0Itec.zkclient=ERROR,org.reflections=ERROR
+      AWS_ACCESS_KEY: '11ewMRBIc3rOd3P'
+      #REPLACE Key with minio bucket access key
+      AWS_SECRET_KEY: '111187KrqovVlvm3JwPkqOCN2uBlpy13Tk'
+      #REPLACE SECRET with minio bucket secret
+
+    volumes:
+      - /data/kafka_connect_data:/bitnami/kafka/connect
+      - /data/connect-properties:/etc/kafka/connect.properties
+      - /tmp:/tmp
+    depends_on:
+      - kafka-broker1 
+      - kafka-broker2
+    networks:
+      - kafka-network
+
+  kafka-control-center:
+    image: bitnami/kafka-control-center:latest
+    container_name: kafka-control-center
+    ports:
+      - "9021:9021"
+    environment:
+      CONTROL_CENTER_BOOTSTRAP_SERVERS: kafka-broker1:19092;kafka-broker2:29092
+      CONTROL_CENTER_ZOOKEEPER_CONNECT: zookeeper:2181;zookeeper:2182
+    depends_on:
+      - kafka-broker1 
+      - kafka-broker2
+    networks:
+      - kafka-network
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui
+    container_name: kafka-ui
+    hostname: kafka-ui
+    volumes:
+      - type: "bind"
+        source: /data/kafkaui_dynamic_config.yaml
+        target: /etc/kafkaui/dynamic_config.yaml
+    ports:
+      - "9080:8080"
+    environment:
+      DYNAMIC_CONFIG_ENABLED: "true"
+    networks:
+      - kafka-network
+
+
+networks:
+  kafka-network:
+    driver: bridge
+
+volumes:
+  zookeeper_data:
+  kafka_broker_data:
+  kafka_connect_data:
+
+#This docker-compose file is written by Abid Ali Syed to start kafka cluster with 2 brokers , 2 zookeepres and webadmin follow steps composed in single docker-compose file
+#requirements: 'docker and  docker-compose' package must be installed on system 'apt install docker docker-compose' 
+#============
+#steps: 1) run 'mkdir -p /data' 
+#       2) chmod 777 /data
+#       3) upload  'docker-compose.yaml' in /data
+#       4) upload  'connect-properties' file  in /data
+#       5) upload  'kafkaui_dynamic_config.yaml' file in /data'
+#       6) run ' docker-compose config'  to verify the docker-compose file
+#       7) if step 6 prints complete 'docker-compose'file then run ' docker-compose up -d'  to start the cluster
