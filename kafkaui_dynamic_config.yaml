@@ -1,0 +1,22 @@
+#REPLACE IPs    
+auth:
+  type: DISABLED
+kafka:
+  clusters:
+  - bootstrapServers: 172.16.4.104:9092
+    kafkaConnect:
+    - address: http://172.16.4.104:8083
+      name: kafkaconnect
+    name: Odyx_datalake
+    properties: {}
+    readOnly: false
+  - bootstrapServers: 172.16.4.104:9092,172.16.4.104:19092,172.16.4.104:29092
+    kafkaConnect:
+    - address: http://172.16.4.104:8083
+      name: kafka-connect
+    name: Cluster1
+    properties: {}
+    readOnly: false
+rbac:
+  roles: []
+webclient: {}
