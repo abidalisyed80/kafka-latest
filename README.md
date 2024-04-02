@@ -3,8 +3,11 @@
 This repository contains a Docker Compose configuration for setting up a Kafka cluster with multiple brokers, Zookeeper nodes, Kafka Connect, Schema Registry, Control Center, Kafka REST Proxy, Kafka KSQLDB Server, Kafka KSQLDB CLI, Kafka UI, and optional monitoring components.
 ### Requirements
 Before executing `docker-compose up -d` create the required folders and files: 
- - ** Create folder /data/files
- - ** Download all property and WebAdmin GUI files to /data/files
+ 1. Create folder /data/files
+  ```bash
+  sudo mkdir -p /data/files
+ ```
+ 2.  Download all property and WebAdmin GUI files to /data/files
 ### Services Overview:
 
 - **Zookeeper1 & Zookeeper2**: Zookeeper nodes required for Kafka coordination.
